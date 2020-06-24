@@ -10,7 +10,7 @@ template <typename T>
 struct vector
 {
     typedef T* iterator;
-    typedef T const* const_iterator;
+    typedef T* const const_iterator;
 
     vector();                               // O(1) nothrow
     vector(vector const&);                  // O(N) strong
@@ -78,7 +78,7 @@ vector<T>::vector() {
 }
 
 template<typename T>
-void vector<T>::destruct_all(const T *src, size_t before) {
+void vector<T>::destruct_all(const T* src, size_t before) {
     for (size_t i = 0; i < before; i++) {
         src[i].~T();
     }
@@ -168,24 +168,24 @@ size_t vector<T>::size() const {
 }
 
 template<typename T>
-T &vector<T>::front() {
+T& vector<T>::front() {
     assert(!empty());
     return *data_;
 }
 
 template<typename T>
-T const &vector<T>::front() const {
+T const& vector<T>::front() const {
     assert(!empty());
     return *data_;
 }
 
 template<typename T>
-T &vector<T>::back() {
+T& vector<T>::back() {
     return data_[size_ - 1];
 }
 
 template<typename T>
-T const &vector<T>::back() const {
+T const& vector<T>::back() const {
     return data_[size_ - 1];
 }
 
@@ -291,14 +291,14 @@ void vector<T>::new_buffer(size_t new_capacity) {
 }
 
 template<typename T>
-typename vector<T>::iterator vector<T>::insert(vector::const_iterator pos, const T &x) {
+typename vector<T>::iterator vector<T>::insert(vector::const_iterator pos, const T& x) {
     if (size_ == 0 && pos == begin()) {
         push_back(x);
         return data_;
     } else {
         size_t pos_ = pos - data_;
         push_back(x);
-            for (size_t i = size_ - 1; i != pos_; i--) {
+        for (size_t i = size_ - 1; i != pos_; i--) {
             std::swap(*(data_ + i), *(data_ + i - 1));
         }
         return (data_ + pos_);
@@ -311,7 +311,7 @@ typename vector<T>::iterator vector<T>::erase(vector::const_iterator pos) {
     std::swap(*(data_ + pos_), *(data_ + size_ - 1));
     pop_back();
     if (size_ != 0) {
-        for (size_t i = pos_; i != size_ - 1; i++) {
+        for (size_t i = pos_; i < size_ - 1; i++) {
             std::swap(*(data_ + i), *(data_ + i + 1));
         }
     }
@@ -323,11 +323,14 @@ typename vector<T>::iterator vector<T>::erase(vector::const_iterator first, vect
     size_t first_ = first - data_;
     size_t last_ = last - data_ - 1;
     size_t rest_size = data_ + size_ - last;
-    for (size_t i = first_; i < first_ + rest_size; i++) {
-        std::swap(data_[i], data_[last_ + i - first_ + 1]);
+    size_t len = last_ - first_ + 1;
+    if (first == last) {
+        return last;
     }
-    size_t pop_back_count = last_ - first_ + 1;
-    for (size_t i = 0; i < pop_back_count; i++) {
+    for (size_t i = 0; i < rest_size; i++) {
+        std::swap(data_[first_ + i], data_[first_ + len + i]);
+    }
+    for (size_t i = 0; i < len; i++) {
         pop_back();
     }
     shrink_to_fit();
