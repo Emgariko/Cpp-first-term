@@ -2,6 +2,7 @@
 #include <cstddef>
 #include <cassert>
 #include <algorithm>
+#include <iostream>
 
 #ifndef VECTOR_H
 #define VECTOR_H
@@ -10,7 +11,7 @@ template <typename T>
 struct vector
 {
     typedef T* iterator;
-    typedef T* const const_iterator;
+    typedef T const* const_iterator;
 
     vector();                               // O(1) nothrow
     vector(vector const&);                  // O(N) strong
@@ -61,8 +62,8 @@ struct vector
 private:
     void push_back_realloc(T const&);
     void new_buffer(size_t new_capacity);
-    void copy_all(T* dst, T const* src, size_t size);
-    void destruct_all(T const* src, size_t before);
+    void static copy_all(T* dst, T const* src, size_t size);
+    void static destruct_all(T const* src, size_t before);
 private:
     T* data_;
     size_t size_;
@@ -79,8 +80,8 @@ vector<T>::vector() {
 
 template<typename T>
 void vector<T>::destruct_all(const T* src, size_t before) {
-    for (size_t i = 0; i < before; i++) {
-        src[i].~T();
+    for (size_t i = before; i > 0; i--) {
+        src[i - 1].~T();
     }
 }
 template<typename T>
@@ -142,13 +143,11 @@ vector<T>::~vector() {
 
 template<typename T>
 T& vector<T>::operator[](size_t i) {
-    assert(i < size_);
     return data_[i];
 }
 
 template<typename T>
 T const& vector<T>::operator[](size_t i) const {
-    assert(i < size_);
     return data_[i];
 }
 
@@ -169,13 +168,11 @@ size_t vector<T>::size() const {
 
 template<typename T>
 T& vector<T>::front() {
-    assert(!empty());
     return *data_;
 }
 
 template<typename T>
 T const& vector<T>::front() const {
-    assert(!empty());
     return *data_;
 }
 
@@ -209,7 +206,6 @@ void vector<T>::push_back_realloc(const T &x) {
 
 template<typename T>
 void vector<T>::pop_back() {
-    assert(!empty());
     (data_ + size_ - 1)->~T();
     size_--;
 }
@@ -227,12 +223,7 @@ size_t vector<T>::capacity() const {
 template<typename T>
 void vector<T>::reserve(size_t new_cap) {
     if (capacity_ < new_cap) {
-        vector<T> copy_vector;
-        copy_vector.new_buffer(new_cap);
-        copy_all(copy_vector.data_, data_, size_);
-        copy_vector.capacity_ = new_cap;
-        copy_vector.size_ = size_;
-        swap(copy_vector);
+        new_buffer(new_cap);
     }
 }
 
@@ -296,9 +287,9 @@ typename vector<T>::iterator vector<T>::insert(vector::const_iterator pos, const
         push_back(x);
         return data_;
     } else {
-        size_t pos_ = pos - data_;
+        ptrdiff_t pos_ = pos - data_;
         push_back(x);
-        for (size_t i = size_ - 1; i != pos_; i--) {
+        for (ptrdiff_t i = size_ - 1; i != pos_; i--) {
             std::swap(*(data_ + i), *(data_ + i - 1));
         }
         return (data_ + pos_);
@@ -307,30 +298,19 @@ typename vector<T>::iterator vector<T>::insert(vector::const_iterator pos, const
 
 template<typename T>
 typename vector<T>::iterator vector<T>::erase(vector::const_iterator pos) {
-    size_t pos_ = pos - data_;
-    std::swap(*(data_ + pos_), *(data_ + size_ - 1));
-    pop_back();
-    if (size_ != 0) {
-        for (size_t i = pos_; i < size_ - 1; i++) {
-            std::swap(*(data_ + i), *(data_ + i + 1));
-        }
-    }
-    return data_ + pos_;
+    return erase(pos, pos + 1);
 }
 
 template<typename T>
 typename vector<T>::iterator vector<T>::erase(vector::const_iterator first, vector::const_iterator last) {
-    size_t first_ = first - data_;
-    size_t last_ = last - data_ - 1;
-    size_t rest_size = data_ + size_ - last;
-    size_t len = last_ - first_ + 1;
-    if (first == last) {
-        return last;
-    }
-    for (size_t i = 0; i < rest_size; i++) {
+    ptrdiff_t first_ = first - data_;
+    ptrdiff_t last_ = last - data_ - 1;
+    ptrdiff_t rest_size = data_ + size_ - last;
+    ptrdiff_t len = last_ - first_ + 1;
+    for (ptrdiff_t i = 0; i < rest_size; i++) {
         std::swap(data_[first_ + i], data_[first_ + len + i]);
     }
-    for (size_t i = 0; i < len; i++) {
+    for (ptrdiff_t i = 0; i < len; i++) {
         pop_back();
     }
     shrink_to_fit();
