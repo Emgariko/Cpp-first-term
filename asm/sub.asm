@@ -3,20 +3,17 @@ section         .text
                 global          _start
 _start:
 
-                sub             rsp, 5 * 128 * 8
-                lea             rdi, [rsp + 4 * 128 * 8]
+                sub             rsp, 2 * 128 * 8
+                lea             rdi, [rsp + 128 * 8]
                 mov             rcx, 128
                 call            read_long
-                lea             rdi, [rsp + 3 * 128 * 8]
+                mov             rdi, rsp
                 call            read_long
-                lea             rsi, [rsp + 4 * 128 * 8]
-                
-                mov             r11, rsp ;r11 - buffer
-                lea             r10, [rsp + 128 * 8] ;r10 - result
-                call            mul_long_long
-                
-                mov             rcx, 256 ;because result - it's 256 QWORD's
-                mov             rdi, r10
+                lea             rsi, [rsp + 128 * 8]
+;rdi - first readed, rsi - second
+                call            swap_long_long
+                call            sub_long_long
+
                 call            write_long
 
                 mov             al, 0x0a
@@ -24,92 +21,37 @@ _start:
 
                 jmp             exit
                 
-; rdi - first operand
-; rsi - second operand
-; rcx - long_long length in QWORD's
-; r11 - buffer(long_long)
-; r10 - result (256 QWORD's)
-mul_long_long:
-                push            rdi
-                push            rsi
-                push            rcx 
+; swaps longs which are in rsi and rdi                
+swap_long_long:
+                mov r9, rsi
+                mov rsi, rdi
+                mov rdi, r9 
                 
-                xor             r14, r14; just a offset counter
-                mov             r13, rcx; length of the remaining long_long
-                mov             r8, rdi
-                mov             r9, r11
-                call            copy_long_long
-                
-                
-.loop:
-                mov             r8, r11
-                mov             r9, rdi
-                ;r8->r9 copy
-                call            copy_long_long
-                
-                mov             rbx, [rsi]
-                push            rsi                
-                call            mul_long_short
-                pop             rsi
-                lea             rsi, [rsi + 8]
-                mov             r8, r10
-                mov             r9, rdi
-                
-                ; add with offset(r14)
-                call            add_long_long
-                
-                inc             r14
-                dec             r13
-                jnz             .loop
-                
-                
-                pop             rcx
-                pop             rsi
-                pop             rdi
-                ret
-                
-; copy long_long(rcx QWORD's) from r8 to r9                 
-copy_long_long:
-                push            r8
-                push            r9
-                push            rcx
-                
-.loop:
-                mov             rax,  [r8]
-                mov             [r9], rax
-                lea             r8, [r8 + 8]
-                lea             r9, [r9 + 8]
-                dec             rcx
-                jnz             .loop
-                
-                pop             rcx
-                pop             r9
-                pop             r8
                 ret
                 
 ; adds two long number
-;    r8 -- address of summand #1 (long number)
-;    r9 -- address of summand #2 (long number)
-;    r14 -- add offset of summand #2
+;    rdi -- address of summand #1 (long number)
+;    rsi -- address of summand #2 (long number)
 ;    rcx -- length of long numbers in qwords
 ; result:
-;    sum is written to r8
+;    sum is written to rdi
 add_long_long:
-                push            r8
-                push            r9
+                push            rdi
+                push            rsi
                 push            rcx
+
                 clc
 .loop:
-                mov             rax, [r9]
-                lea             r9, [r9 + 8]
-                adc             [r8 + r14 * 8], rax
-                lea             r8, [r8 + 8]
+                mov             rax, [rsi]
+                lea             rsi, [rsi + 8]
+                adc             [rdi], rax
+                lea             rdi, [rdi + 8]
                 dec             rcx
                 jnz             .loop
-                
+
                 pop             rcx
-                pop             r9
-                pop             r8
+                pop             rsi
+                pop             rdi
                 ret
                 
 ; subtracts two long number
@@ -173,8 +115,7 @@ mul_long_short:
                 push            rax
                 push            rdi
                 push            rcx
-                push            rsi
-                
+
                 xor             rsi, rsi
 .loop:
                 mov             rax, [rdi]
@@ -187,7 +128,6 @@ mul_long_short:
                 dec             rcx
                 jnz             .loop
 
-                pop             rsi
                 pop             rcx
                 pop             rdi
                 pop             rax
@@ -401,4 +341,3 @@ print_string:
 invalid_char_msg:
                 db              "Invalid character: "
 invalid_char_msg_size: equ             $ - invalid_char_msg
-
