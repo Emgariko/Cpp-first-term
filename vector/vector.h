@@ -15,7 +15,7 @@ struct vector
 
     vector();                               // O(1) nothrow
     vector(vector const&);                  // O(N) strong
-    vector<T>& operator=(vector const& other); // O(N) strong
+    vector& operator=(vector const& other); // O(N) strong
 
     ~vector();                              // O(N) nothrow
 
@@ -72,11 +72,7 @@ private:
 
 
 template<typename T>
-vector<T>::vector() {
-    data_ = nullptr;
-    size_ = 0;
-    capacity_ = 0;
-}
+vector<T>::vector(): data_(nullptr), size_(0), capacity_(0) {}
 
 template<typename T>
 void vector<T>::destruct_all(const T* src, size_t before) {
@@ -99,30 +95,18 @@ void vector<T>::copy_all(T* dst, T const* src, size_t size) {
 
 
 template<typename T>
-vector<T>::vector(vector<T> const& other) {
-    size_ = 0;
-    data_ = nullptr;
-    capacity_ = 0;
-    if (other.capacity_ == 0) {
-        destruct_all(data_, size_);
-        operator delete(data_);
-        capacity_ = 0;
-        size_ = 0;
-        data_ = nullptr;
-    } else {
-        T *new_data = static_cast<T*>(operator new(other.capacity_ * sizeof(T)));
-        try {
-            copy_all(new_data, other.data_, other.size_);
-        } catch (...) {
-            operator delete(new_data);
-            throw;
-        }
-        destruct_all(data_, size_);
-        operator delete(data_);
-        size_ = other.size_;
-        capacity_ = other.capacity_;
-        data_ = new_data;
-    };
+vector<T>::vector(vector<T> const& other): vector() {
+    if (other.size_ == 0) { return; }
+    T* new_data = static_cast<T*>(operator new(other.size_ * sizeof(T)));
+    try {
+        copy_all(new_data, other.data_, other.size_);
+    } catch (...) {
+        operator delete(new_data);
+        throw;
+    }
+    size_ = other.size_;
+    capacity_ = other.capacity_;
+    data_ = new_data;
 }
 
 template<typename T>
@@ -198,7 +182,7 @@ void vector<T>::push_back(const T & x) {
 
 template<typename T>
 void vector<T>::push_back_realloc(const T &x) {
-    vector <T> copy_vector(*this);
+    vector<T> copy_vector(*this);
     copy_vector.reserve(capacity_ == 0 ? 1 : 2 * capacity_);
     copy_vector.push_back(x);
     swap(copy_vector);
@@ -206,7 +190,7 @@ void vector<T>::push_back_realloc(const T &x) {
 
 template<typename T>
 void vector<T>::pop_back() {
-    (data_ + size_ - 1)->~T();
+    data_[size_ - 1].~T();
     size_--;
 }
 
@@ -271,29 +255,30 @@ typename vector<T>::const_iterator vector<T>::end() const {
 template<typename T>
 void vector<T>::new_buffer(size_t new_capacity) {
     assert(new_capacity >= size_);
-    vector <T> copy_vector;
-    if (new_capacity > 0) {
-        copy_vector.data_ = static_cast<T*>(operator new(sizeof(T) * new_capacity));
-        copy_all(copy_vector.data_, data_, size_);
-        copy_vector.size_ = size_;
-        copy_vector.capacity_ = new_capacity;
+    T* new_data = nullptr;
+    if (new_capacity != 0) {
+        new_data = static_cast<T *>(operator new(sizeof(T) * new_capacity));
+        try {
+            copy_all(new_data, data_, size_);
+        } catch (...) {
+            operator delete(new_data);
+            throw;
+        }
+        destruct_all(data_, size_);
     }
-    swap(copy_vector);
+    operator delete(data_);
+    data_ = new_data;
+    capacity_ = new_capacity;
 }
 
 template<typename T>
 typename vector<T>::iterator vector<T>::insert(vector::const_iterator pos, const T& x) {
-    if (size_ == 0 && pos == begin()) {
-        push_back(x);
-        return data_;
-    } else {
-        ptrdiff_t pos_ = pos - data_;
-        push_back(x);
-        for (ptrdiff_t i = size_ - 1; i != pos_; i--) {
-            std::swap(*(data_ + i), *(data_ + i - 1));
-        }
-        return (data_ + pos_);
+    ptrdiff_t pos_ = pos - data_;
+    push_back(x);
+    for (ptrdiff_t i = size_ - 1; i != pos_; i--) {
+        std::swap(*(data_ + i), *(data_ + i - 1));
     }
+    return (data_ + pos_);
 }
 
 template<typename T>
@@ -313,9 +298,7 @@ typename vector<T>::iterator vector<T>::erase(vector::const_iterator first, vect
     for (ptrdiff_t i = 0; i < len; i++) {
         pop_back();
     }
-    shrink_to_fit();
     return begin() + first_;
 }
-
 
 #endif // VECTOR_H
