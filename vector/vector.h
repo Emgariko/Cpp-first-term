@@ -70,7 +70,6 @@ private:
     size_t capacity_;
 };
 
-
 template<typename T>
 vector<T>::vector(): data_(nullptr), size_(0), capacity_(0) {}
 
@@ -80,6 +79,7 @@ void vector<T>::destruct_all(const T* src, size_t before) {
         src[i - 1].~T();
     }
 }
+
 template<typename T>
 void vector<T>::copy_all(T* dst, T const* src, size_t size) {
     size_t i = 0;
@@ -92,7 +92,6 @@ void vector<T>::copy_all(T* dst, T const* src, size_t size) {
         throw;
     }
 }
-
 
 template<typename T>
 vector<T>::vector(vector<T> const& other): vector() {
@@ -171,7 +170,7 @@ T const& vector<T>::back() const {
 }
 
 template<typename T>
-void vector<T>::push_back(const T & x) {
+void vector<T>::push_back(const T &x) {
     if (size_ != capacity_) {
         new(data_ + size_) T(x);
         size_++;
@@ -182,10 +181,9 @@ void vector<T>::push_back(const T & x) {
 
 template<typename T>
 void vector<T>::push_back_realloc(const T &x) {
-    vector<T> copy_vector(*this);
-    copy_vector.reserve(capacity_ == 0 ? 1 : 2 * capacity_);
-    copy_vector.push_back(x);
-    swap(copy_vector);
+    T y(x);
+    this->reserve(capacity_ == 0 ? 1 : 2 * capacity_);
+    this->push_back(y);
 }
 
 template<typename T>
@@ -245,7 +243,6 @@ template<typename T>
 typename vector<T>::const_iterator vector<T>::begin() const {
     return (data_);
 }
-
 
 template<typename T>
 typename vector<T>::const_iterator vector<T>::end() const {
