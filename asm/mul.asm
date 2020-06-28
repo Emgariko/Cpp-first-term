@@ -3,19 +3,18 @@ section         .text
                 global          _start
 _start:
 
-                sub             rsp, 5 * 128 * 8
-                lea             rdi, [rsp + 4 * 128 * 8]
+                sub             rsp, 4 * 128 * 8
+                lea             rdi, [rsp + 3 * 128 * 8]
                 mov             rcx, 128
                 call            read_long
-                lea             rdi, [rsp + 3 * 128 * 8]
+                lea             rdi, [rsp + 2 * 128 * 8]
                 call            read_long
-                lea             rsi, [rsp + 4 * 128 * 8]
-                
-                mov             r11, rsp ;r11 - buffer
-                lea             r10, [rsp + 128 * 8] ;r10 - result
+                lea             rsi, [rsp + 3 * 128 * 8]
+
+                lea             r10, [rsp] ;r10 - result
                 call            mul_long_long
                 
-                mov             rcx, 256 ;because result - it's 256 QWORD's
+                mov             rcx, 256 ; result - it's 256 QWORD's
                 mov             rdi, r10
                 call            write_long
 
@@ -26,67 +25,51 @@ _start:
                 
 ; rdi - first operand
 ; rsi - second operand
-; rcx - long_long length in QWORD's
-; r11 - buffer(long_long)
+; rcx - long length in QWORD's
 ; r10 - result (256 QWORD's)
 mul_long_long:
                 push            rdi
                 push            rsi
-                push            rcx 
-                
-                xor             r14, r14; just a offset counter
-                mov             r13, rcx; length of the remaining long_long
-                mov             r8, rdi
-                mov             r9, r11
-                call            copy_long_long
-                
-                
+                push            rcx
+
+                xor             r11, r11
 .loop:
-                mov             r8, r11
-                mov             r9, rdi
-                ;r8->r9 copy
-                call            copy_long_long
-                
+                mov             r13, rcx
+                xor             r15, r15 ; i'll use it as carry reg
+                mov             r14, r10 ; just an index
+                add             r14, r11
+                push            rdi
+.mul_loop:      ;my_mul_long_short
                 mov             rbx, [rsi]
-                push            rsi                
-                call            mul_long_short
-                pop             rsi
-                lea             rsi, [rsi + 8]
-                mov             r8, r10
-                mov             r9, rdi
-                
-                ; add with offset(r14)
-                call            add_long_long
-                
-                inc             r14
+                mov             rax, [rdi]
+                mul             rbx
+                add             rax, r15
+                adc             rdx, 0
+
+                add             [r14], rax
+                adc             rdx, 0
+
+                mov             r15, rdx
+                add             r14, 8
+                add             rdi, 8
                 dec             r13
-                jnz             .loop
-                
-                
+                jnz             .mul_loop
+
+                pop             rdi
+                add             rsi, 8
+                add             r11, 8
+
+                ; add carry to next digit
+                add             [r14], rdx
+                cmp             r11, 1024
+                jb              .loop   ; if r11 < 1024 (1024 = 128 * 8)
+
                 pop             rcx
                 pop             rsi
                 pop             rdi
                 ret
-                
-; copy long_long(rcx QWORD's) from r8 to r9                 
-copy_long_long:
-                push            r8
-                push            r9
-                push            rcx
-                
-.loop:
-                mov             rax,  [r8]
-                mov             [r9], rax
-                lea             r8, [r8 + 8]
-                lea             r9, [r9 + 8]
-                dec             rcx
-                jnz             .loop
-                
-                pop             rcx
-                pop             r9
-                pop             r8
-                ret
-                
+
+
 ; adds two long number
 ;    r8 -- address of summand #1 (long number)
 ;    r9 -- address of summand #2 (long number)
@@ -98,7 +81,7 @@ add_long_long:
                 push            r8
                 push            r9
                 push            rcx
-                clc
+                ;clc
 .loop:
                 mov             rax, [r9]
                 lea             r9, [r9 + 8]
