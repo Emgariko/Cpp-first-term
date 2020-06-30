@@ -2,7 +2,6 @@ section         .text
 
                 global          _start
 _start:
-
                 sub             rsp, 2 * 128 * 8
                 lea             rdi, [rsp + 128 * 8]
                 mov             rcx, 128
