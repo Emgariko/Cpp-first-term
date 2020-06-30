@@ -32,6 +32,10 @@ mul_long_long:
                 push            rsi
                 push            rcx
 
+                mov             rax, 8
+                mul             rcx
+                mov             r12, rax ;r12 = rcx * 8 (rcx = operand's length)
+
                 xor             r11, r11
 .loop:
                 mov             r13, rcx
@@ -60,9 +64,9 @@ mul_long_long:
                 add             r11, 8
 
                 ; add carry to next digit
-                add             [r14], rdx
-                cmp             r11, 1024
-                jb              .loop   ; if r11 < 1024 (1024 = 128 * 8)
+                add             [r14], r15
+                cmp             r11, r12
+                jb              .loop   ; if r11 < r12
 
                 pop             rcx
                 pop             rsi
@@ -384,4 +388,3 @@ print_string:
 invalid_char_msg:
                 db              "Invalid character: "
 invalid_char_msg_size: equ             $ - invalid_char_msg
-
