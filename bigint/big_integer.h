@@ -55,9 +55,7 @@ struct big_integer
     void swap(big_integer& b);
     friend std::string to_string(big_integer const& a);
 
-    // :TODO: make it private
-    std::vector <uint32_t> data_;
-//private:
+private:
     bool sign;
     size_t sz_;
     void shrink();
@@ -67,6 +65,7 @@ struct big_integer
     big_integer& div_uint(uint32_t const b);
     big_integer& mul_uint(uint32_t const rhs);
     uint32_t first();
+    std::vector <uint32_t> data_;
 
     big_integer &difference(const big_integer &b, size_t offset, size_t m);
 };
