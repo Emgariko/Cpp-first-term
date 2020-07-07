@@ -2,31 +2,24 @@
 
 big_integer::big_integer() : data_(1, 0u), sign(false) {}
 
-big_integer::big_integer(big_integer const& other) {
-    this->sign = other.sign;
-    this->data_ = std::vector<uint32_t>(other.data_);
-}
+big_integer::big_integer(big_integer const& other) = default;
+
 
 big_integer::big_integer(int a)
 {
-    this->sign = false;
+    sign = false;
     if (a < 0) {
-        if (a == INT32_MIN) {
-            int64_t x = a;
-            data_.push_back(-x);
-            *this = -*this;
-        } else {
-            data_ = std::vector<uint32_t>(1, static_cast<uint32_t>(-a));
-            *this = -(*this);
-        }
+        data_.push_back(static_cast<uint32_t>((a == INT32_MIN ? 1 : -1)) * a);
+        data_[0] *= (a == INT32_MIN ? -1 : 1);
+        *this = -(*this);
     } else {
-        this->data_ = std::vector<uint32_t>(1, static_cast<uint32_t>(a));
+        data_ = std::vector<uint32_t>(1, static_cast<uint32_t>(a));
     }
 }
 
 big_integer::big_integer(uint32_t a) {
-    this->sign = false;
-    this->data_.push_back(a);
+    sign = false;
+    data_.push_back(a);
 }
 
 big_integer::big_integer(std::string const& str) : big_integer()
@@ -50,28 +43,6 @@ big_integer::big_integer(std::string const& str) : big_integer()
     }
 }
 
-big_integer::big_integer(long long a) {
-    this->sign = false;
-    if (a >= 0) {
-        uint32_t first = a;
-        uint32_t second = a >> 32;
-        data_ = std::vector<uint32_t>();
-        data_.reserve(2);
-        data_.push_back(first);
-        data_.push_back(second);
-    } else {
-        a = -a;
-        uint32_t first = a;
-        uint32_t second = a >> 32;
-        data_ = std::vector<uint32_t>();
-        data_.reserve(2);
-        data_.push_back(first);
-        data_.push_back(second);
-        *this = -(*this);
-    }
-    shrink();
-}
-
 big_integer::~big_integer() = default;
 
 void big_integer::swap(big_integer &b) {
@@ -79,12 +50,7 @@ void big_integer::swap(big_integer &b) {
     std::swap(sign, b.sign);
 }
 
-big_integer& big_integer::operator=(big_integer const& other)
-{
-    data_ = other.data_;
-    sign = other.sign;
-    return *this;
-}
+big_integer& big_integer::operator=(big_integer const& other) = default;
 
 big_integer& big_integer::operator+=(big_integer const& rhs)
 {
@@ -272,10 +238,7 @@ big_integer& big_integer::operator/=(big_integer const& rhs)
 
 big_integer& big_integer::operator%=(big_integer const& rhs)
 {
-    big_integer &a = *this;
-    big_integer b = rhs;
-    big_integer c = a / b;
-    return a = (a - b * c);
+    return (*this) = ((*this) - rhs * ((*this) / rhs));
 }
 
 big_integer& big_integer::operator&=(big_integer const& rhs)
@@ -285,12 +248,7 @@ big_integer& big_integer::operator&=(big_integer const& rhs)
     expand(l);
     uint32_t val = sign ? UINT32_MAX : 0u;
     for (size_t i = 0; i < l; i++) {
-        if (i < rhs.data_.size()) {
-            data_[i] &= rhs.data_[i];
-        }
-        else {
-            data_[i] &= val;
-        }
+        data_[i] &= (i < rhs.data_.size()) ? rhs.data_[i] : val;
     }
     shrink();
     return *this;
@@ -303,12 +261,7 @@ big_integer& big_integer::operator|=(big_integer const& rhs)
     expand(l);
     uint32_t val = sign ? UINT32_MAX : 0u;
     for (size_t i = 0; i < l; i++) {
-        if (i < rhs.data_.size()) {
-            data_[i] |= rhs.data_[i];
-        }
-        else {
-            data_[i] |= val;
-        }
+        data_[i] |= (i < rhs.data_.size()) ? rhs.data_[i] : val;
     }
     return *this;
 }
@@ -320,12 +273,7 @@ big_integer& big_integer::operator^=(big_integer const& rhs)
     expand(l);
     uint32_t val = sign ? UINT32_MAX : 0u;
     for (size_t i = 0; i < l; i++) {
-        if (i < rhs.data_.size()) {
-            data_[i] ^= rhs.data_[i];
-        }
-        else {
-            data_[i] ^= val;
-        }
+        data_[i] ^= (i < rhs.data_.size()) ? rhs.data_[i] : val;
     }
     return *this;
 }
@@ -525,21 +473,17 @@ std::string to_string(big_integer const& a)
         return "0";
     }
     std::string res = "";
-    uint32_t ten = 10;
-    big_integer b = a, c, d, e;
+    big_integer b = a, c;
     bool res_sign = false;
     if (b < 0) {
         res_sign = b.sign;
         b *= -1;
     }
     while (b != 0) {
-        c = b;
-        c.div_uint(ten);
-        d = c;
-        d.mul_uint(ten);
-        char cur = '0' + (b - d).first();
+        c = (b / 10) * 10;
+        char cur = '0' + (b - c).first();
         res.push_back(cur);
-        b.swap(c);
+        b /= 10;
     }
     if (res_sign) {
         res.push_back('-');
