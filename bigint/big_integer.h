@@ -2,6 +2,7 @@
 #define BIG_INTEGER_H
 
 #include <iostream>
+#include <cstdint>
 #include <cstring>
 #include <stdexcept>
 #include <vector>
@@ -12,7 +13,6 @@ struct big_integer
     big_integer();
     big_integer(big_integer const& other);
     big_integer(int a);
-    big_integer(long long a);
     explicit big_integer(std::string const& str);
 
     big_integer(uint32_t a);
