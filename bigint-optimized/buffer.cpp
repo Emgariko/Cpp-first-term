@@ -1,6 +1,6 @@
 #include "buffer.h"
 
-buffer::buffer(size_t size) : data_(size), refs(1) {}
+buffer::buffer(size_t size) : refs(1), data_(size) {}
 
 buffer::buffer(std::vector<uint32_t> &data) : refs(1), data_(data) {}
 
