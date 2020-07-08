@@ -8,9 +8,8 @@
 struct buffer {
     size_t refs;
     buffer();
-//    buffer(std::vector<uint32_t>& data);
     buffer(size_t size);
-    buffer(std::vector<uint32_t>& data);
+    buffer(const std::vector<uint32_t>& data);
     buffer(size_t size, size_t value);
     uint32_t& operator[](size_t index);
     const uint32_t& operator[](size_t index) const;
@@ -26,5 +25,4 @@ struct buffer {
 private:
     std::vector<uint32_t> data_;
 };
-
 #endif //BIGINT__BUFFER_H_

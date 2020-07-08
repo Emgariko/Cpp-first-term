@@ -2,7 +2,7 @@
 
 buffer::buffer(size_t size) : refs(1), data_(size) {}
 
-buffer::buffer(std::vector<uint32_t> &data) : refs(1), data_(data) {}
+buffer::buffer(const std::vector<uint32_t> &data) : refs(1), data_(data) {}
 
 buffer::buffer(size_t size, size_t value) : refs(1), data_(size, value) {}
 
